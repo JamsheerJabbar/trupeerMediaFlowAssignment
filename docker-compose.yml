@@ -1,0 +1,164 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - mediaflow-net
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mediaflow-net
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    volumes:
+      - ./infra/init-minio.sh:/init-minio.sh
+    entrypoint: ["/bin/sh", "/init-minio.sh"]
+    networks:
+      - mediaflow-net
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    volumes:
+      - gateway_data:/data
+    environment:
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: mediaflow
+      DATABASE_PATH: /data/mediaflow.db
+      MAX_CONCURRENT_JOBS: "2"
+      PRESSURE_THRESHOLD: "0.8"
+      TIMEOUT_OVERLAY: "1200"
+      TIMEOUT_TRANSCODE: "900"
+      TIMEOUT_EXTRACT: "600"
+      MAX_RETRIES: "3"
+      WORKER_HEARTBEAT_TTL: "15"
+      MONITOR_INTERVAL_SECONDS: "30"
+      WATCHDOG_INTERVAL_SECONDS: "60"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      retries: 3
+    networks:
+      - mediaflow-net
+
+  worker-overlay:
+    build:
+      context: ./workers
+      dockerfile: base/Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+    environment:
+      JOB_TYPE: overlay
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: mediaflow
+      GATEWAY_URL: http://gateway:8000
+      MAX_CONCURRENT_JOBS: "2"
+      WORKER_HEARTBEAT_INTERVAL: "10"
+      WORKER_HEARTBEAT_TTL: "15"
+    networks:
+      - mediaflow-net
+
+  worker-transcode:
+    build:
+      context: ./workers
+      dockerfile: base/Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+    environment:
+      JOB_TYPE: transcode
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: mediaflow
+      GATEWAY_URL: http://gateway:8000
+      MAX_CONCURRENT_JOBS: "1"
+      WORKER_HEARTBEAT_INTERVAL: "10"
+      WORKER_HEARTBEAT_TTL: "15"
+    networks:
+      - mediaflow-net
+
+  worker-extract:
+    build:
+      context: ./workers
+      dockerfile: base/Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+    environment:
+      JOB_TYPE: extract
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: mediaflow
+      GATEWAY_URL: http://gateway:8000
+      MAX_CONCURRENT_JOBS: "3"
+      WORKER_HEARTBEAT_INTERVAL: "10"
+      WORKER_HEARTBEAT_TTL: "15"
+    networks:
+      - mediaflow-net
+
+volumes:
+  redis_data:
+  minio_data:
+  gateway_data:
+
+networks:
+  mediaflow-net:
+    driver: bridge

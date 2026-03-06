@@ -1,0 +1,36 @@
+1
+00:00:00,000 --> 00:00:05,040
+Now, let's do the live demo.
+
+2
+00:00:05,040 --> 00:00:07,680
+Welcome to Nexora Workbench.
+
+3
+00:00:07,680 --> 00:00:11,600
+Here you can see our dashboard and the set of agents.
+
+4
+00:00:11,600 --> 00:00:17,600
+So we have document processing agent, custom declaration agent, an HS code lookup agent
+
+5
+00:00:17,600 --> 00:00:20,020
+and the NexQA system as well.
+
+6
+00:00:20,020 --> 00:00:27,680
+So let's upload a document inside the document assistant and see how it extracts our data.
+
+7
+00:00:27,880 --> 00:00:28,880
+Hey.
+
+8
+00:00:42,920 --> 00:00:45,900
+How are we going to get it done?
+
+9
+00:00:46,140 --> 00:00:49,540
+What is this kind of hosting?
+
