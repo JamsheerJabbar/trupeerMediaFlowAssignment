@@ -8,177 +8,74 @@ from a single `docker-compose up` to a production deployment.
 
 ## System Architecture Diagram
 
-<details open>
-<summary>Click to expand diagram</summary>
+flowchart TD
+    Client(["🖥️ Client"])
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MediaFlow Architecture</title>
-  <style>
-    :root {
-      --bg-color: #f8fafc; --text-main: #0f172a; --text-muted: #475569;
-      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      --color-api-bg: #eff6ff; --color-api-border: #bfdbfe; --color-api-accent: #2563eb;
-      --color-db-bg: #faf5ff; --color-db-border: #e9d5ff; --color-db-accent: #9333ea;
-      --color-broker-bg: #fff1f2; --color-broker-border: #fecdd3; --color-broker-accent: #e11d48;
-      --color-worker-bg: #fffbeb; --color-worker-border: #fde68a; --color-worker-accent: #d97706;
-      --color-storage-bg: #f0fdf4; --color-storage-border: #bbf7d0; --color-storage-accent: #16a34a;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-main); line-height: 1.5; padding: 2rem; }
-    .container { max-width: 1200px; margin: 0 auto; }
-    .header { margin-bottom: 2.5rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 1.5rem; }
-    .header h1 { font-size: 2rem; font-weight: 700; color: #0f172a; margin-bottom: 0.5rem; }
-    .header p { color: var(--text-muted); font-size: 1.1rem; }
-    .architecture-grid { display: flex; flex-direction: column; gap: 2rem; position: relative; }
-    .tier { background: white; border: 1px solid #cbd5e1; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: relative; }
-    .tier-title { font-size: 1rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
-    .cards-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
-    .card { border: 2px solid; border-radius: 8px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; }
-    .card-title { font-size: 1.1rem; font-weight: 700; }
-    .card-desc { font-size: 0.9rem; color: var(--text-muted); }
-    .theme-api { background: var(--color-api-bg); border-color: var(--color-api-border); }
-    .theme-api .card-title { color: var(--color-api-accent); }
-    .theme-db { background: var(--color-db-bg); border-color: var(--color-db-border); }
-    .theme-db .card-title { color: var(--color-db-accent); }
-    .theme-broker { background: var(--color-broker-bg); border-color: var(--color-broker-border); }
-    .theme-broker .card-title { color: var(--color-broker-accent); }
-    .theme-worker { background: var(--color-worker-bg); border-color: var(--color-worker-border); }
-    .theme-worker .card-title { color: var(--color-worker-accent); }
-    .theme-storage { background: var(--color-storage-bg); border-color: var(--color-storage-border); }
-    .theme-storage .card-title { color: var(--color-storage-accent); }
-    .tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: auto; }
-    .tag { font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.5rem; border-radius: 4px; background: rgba(0,0,0,0.05); color: #334155; }
-    .badge { display: inline-block; font-size: 0.75rem; font-family: monospace; font-weight: 600; padding: 2px 6px; border-radius: 4px; color: white; }
-    .badge-post { background: #10b981; } .badge-get { background: #3b82f6; } .badge-patch { background: #f59e0b; }
-    ul.feature-list { list-style: none; font-size: 0.85rem; display: flex; flex-direction: column; gap: 0.4rem; }
-    ul.feature-list li::before { content: "•"; color: currentColor; font-weight: bold; margin-right: 0.5rem; }
-    .prod-path { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px dashed rgba(0,0,0,0.1); font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.4rem; }
-    .prod-path strong { color: var(--text-main); font-weight: 600; }
-    .down-arrow { text-align: center; color: #94a3b8; font-size: 1.5rem; margin: -1rem 0; z-index: 10; }
-    .split-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; }
-    .lifecycle-panel { background: white; border: 1px solid #cbd5e1; border-radius: 12px; padding: 1.5rem; }
-    .lifecycle-step { font-size: 0.85rem; margin-bottom: 1rem; padding-left: 1.25rem; position: relative; border-left: 2px solid #e2e8f0; }
-    .lifecycle-step::before { content: ""; position: absolute; left: -6px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: #3b82f6; }
-    .lifecycle-step strong { color: #0f172a; display: block; margin-bottom: 0.2rem; }
-    @media (max-width: 900px) { .split-layout { grid-template-columns: 1fr; } }
-  </style>
-</head>
-<body>
-<div class="container">
-  <header class="header">
-    <h1>MediaFlow Architecture</h1>
-    <p>A distributed, fault-tolerant media processing system built for scale. Runs entirely with <code>docker-compose up</code>.</p>
-  </header>
-  <div class="split-layout">
-    <div class="architecture-grid">
-      <div class="tier">
-        <div class="tier-title">1. Control Plane & Entrypoint</div>
-        <div class="cards-row">
-          <div class="card theme-api">
-            <div class="card-title">API Gateway (FastAPI)</div>
-            <div class="card-desc">Handles client requests, job state orchestration, and pre-flight worker checks.</div>
-            <ul class="feature-list">
-              <li><span class="badge badge-post">POST</span> /jobs (Submit job)</li>
-              <li><span class="badge badge-get">GET</span> /jobs/{id} (Poll status)</li>
-              <li><span class="badge badge-patch">PATCH</span> /internal/stages/{id} (Worker callbacks)</li>
-            </ul>
-          </div>
-          <div class="card theme-api">
-            <div class="card-title">Background Monitors</div>
-            <div class="card-desc">Asynchronous safety nets running inside the Gateway.</div>
-            <ul class="feature-list">
-              <li><strong>Watchdog (60s):</strong> Re-queues stale <em>in_progress</em> jobs caused by silent worker crashes.</li>
-              <li><strong>Queue Monitor (30s):</strong> Tracks queue depth vs worker capacity for alerting.</li>
-            </ul>
-          </div>
-          <div class="card theme-db">
-            <div class="card-title">SQLite Database</div>
-            <div class="card-desc">Source of truth for job states. WAL mode enabled for concurrent reads/writes.</div>
-            <ul class="feature-list">
-              <li>Tracks <code>status</code>, <code>attempt_count</code>, paths</li>
-              <li>Aggregates stage status to job level</li>
-            </ul>
-            <div class="prod-path"><strong>Production:</strong> Drop-in replace with PostgreSQL via env var.</div>
-          </div>
-        </div>
-      </div>
-      <div class="down-arrow">↓</div>
-      <div class="tier">
-        <div class="tier-title">2. Message Broker Transport</div>
-        <div class="cards-row">
-          <div class="card theme-broker">
-            <div class="card-title">Redis</div>
-            <div class="card-desc">Decouples web requests from processing. Ensures jobs aren't lost during traffic spikes.</div>
-            <ul class="feature-list">
-              <li><strong>Queues:</strong> <code>queue:overlay</code>, <code>transcode</code>, <code>extract</code> (LIST)</li>
-              <li><strong>Presence:</strong> <code>worker:presence:{type}:{id}</code> (15s TTL)</li>
-              <li><strong>DLQ:</strong> Jobs fail after 3 retries move to <code>dlq:*</code></li>
-            </ul>
-            <div class="prod-path"><strong>Production:</strong> Upgrade to Redis Streams + Consumer Groups.</div>
-          </div>
-        </div>
-      </div>
-      <div class="down-arrow">↓</div>
-      <div class="tier">
-        <div class="tier-title">3. Scalable Worker Pools (Stateless Processors)</div>
-        <div class="cards-row">
-          <div class="card theme-worker">
-            <div class="card-title">worker-overlay</div>
-            <div class="card-desc">Burns .srt subtitles into video.</div>
-            <ul class="feature-list"><li>Tool: <code>FFmpeg</code></li><li>Capacity: 2 Concurrent jobs per container</li></ul>
-            <div class="tags"><span class="tag">Docker Scalable</span></div>
-          </div>
-          <div class="card theme-worker">
-            <div class="card-title">worker-transcode</div>
-            <div class="card-desc">Downscales video to 480p (H.264/AAC).</div>
-            <ul class="feature-list"><li>Tool: <code>FFmpeg</code></li><li>Capacity: 1 Concurrent job (CPU Heavy)</li></ul>
-            <div class="tags"><span class="tag">Docker Scalable</span></div>
-          </div>
-          <div class="card theme-worker">
-            <div class="card-title">worker-extract</div>
-            <div class="card-desc">Strips audio & encodes to MP3.</div>
-            <ul class="feature-list"><li>Tool: <code>FFmpeg</code></li><li>Capacity: 3 Concurrent jobs (Lightweight)</li></ul>
-            <div class="tags"><span class="tag">Docker Scalable</span></div>
-          </div>
-        </div>
-        <div class="prod-path" style="margin-top: 1rem; border-top: none; padding-top: 0;"><strong>Production:</strong> Replace manual docker-compose scaling with Kubernetes KEDA (HPA based on Redis queue depth).</div>
-      </div>
-      <div class="down-arrow">↓</div>
-      <div class="tier">
-        <div class="tier-title">4. Object Storage & Idempotency</div>
-        <div class="cards-row">
-          <div class="card theme-storage">
-            <div class="card-title">MinIO Storage</div>
-            <div class="card-desc">Stores raw inputs and processed outputs. Output paths act as native idempotency guards.</div>
-            <ul class="feature-list">
-              <li>Input: <code>jobs/{id}/input/original.mp4</code></li>
-              <li>Output: <code>jobs/{id}/stages/{stage_id}/output.*</code></li>
-              <li><em>If worker crashes post-upload, next retry sees output exists and skips processing.</em></li>
-            </ul>
-            <div class="prod-path"><strong>Production:</strong> Switch credentials/endpoint to AWS S3 or GCS.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="lifecycle-panel">
-      <h2 style="font-size: 1.1rem; margin-bottom: 1.5rem; color: #0f172a;">Job Lifecycle Flow</h2>
-      <div class="lifecycle-step"><strong>1. Submit Job</strong>Client sends media to API Gateway. Gateway checks worker presence, logs Job & Stages to SQLite, uploads to MinIO, and pushes messages to Redis.</div>
-      <div class="lifecycle-step"><strong>2. Worker Claims</strong>Worker's BRPOP loop wakes up. Patches Gateway to set status to <code>in_progress</code>.</div>
-      <div class="lifecycle-step"><strong>3. Idempotency Check</strong>Worker checks MinIO. If output exists (due to prior crash), it skips processing entirely.</div>
-      <div class="lifecycle-step"><strong>4. Processing</strong>Downloads input, processes via FFmpeg, uploads output to MinIO.</div>
-      <div class="lifecycle-step"><strong>5. Completion & Retry</strong>Worker patches Gateway with <code>completed</code> or <code>failed</code>. Gateway increments attempt count on failure. After 3 tries, moves to Dead Letter Queue (DLQ).</div>
-      <div class="lifecycle-step"><strong>6. Fault Tolerance</strong>If a worker dies silently during step 4, the Gateway's Watchdog catches the timeout and re-queues the job seamlessly.</div>
-    </div>
-  </div>
-</div>
-</body>
-</html>
+    subgraph GW["API Gateway"]
+        direction TB
+        HTTP["HTTP Server\nPOST /jobs · GET /jobs/:id\nPATCH /internal/stages/:id\nGET /admin/dlq/:type"]
+        WD["⏱ Watchdog\nevery 60s — re-queues stale in_progress stages"]
+        QM["📊 Queue Monitor\nevery 30s — queue depth vs worker capacity"]
+    end
 
-</details>
+    subgraph DB["SQLite · WAL Mode"]
+        direction TB
+        JT["jobs\nid · status · timestamps"]
+        ST["stages\nid · job_id · type · status\nattempt_count · output_path · error"]
+    end
+
+    subgraph RD["Redis"]
+        direction TB
+        Q1["queue:overlay  LIST"]
+        Q2["queue:transcode  LIST"]
+        Q3["queue:extract  LIST"]
+        DLQ["dlq:overlay / transcode / extract"]
+        HP["worker:presence:{type}:{id}\nTTL 15s · refreshed every 10s"]
+    end
+
+    subgraph WK["Worker Pools · Stateless"]
+        direction LR
+        WO["worker-overlay\nFFmpeg — SRT burn\n2 concurrent"]
+        WT["worker-transcode\nFFmpeg — 480p H.264\n1 concurrent"]
+        WE["worker-extract\nFFmpeg — MP3\n3 concurrent"]
+    end
+
+    subgraph MN["MinIO · S3-Compatible Storage"]
+        IN["jobs/{id}/input/original.mp4"]
+        OUT["jobs/{id}/stages/{stage_id}/output.*\nDeterministic path = idempotency guard"]
+    end
+
+    Client -->|"POST /jobs multipart upload"| HTTP
+    Client -->|"GET /jobs/:id poll status"| HTTP
+
+    HTTP --> DB
+    HTTP -->|"LPUSH on submit"| RD
+    WD -->|"reads stale stages"| DB
+    WD -->|"LPUSH re-queue or DLQ"| RD
+    QM -->|"LLEN + KEYS presence"| RD
+    HTTP -->|"upload input"| MN
+
+    Q1 -->|BRPOP| WO
+    Q2 -->|BRPOP| WT
+    Q3 -->|BRPOP| WE
+
+    WO <-->|"download input / upload output"| MN
+    WT <-->|"download input / upload output"| MN
+    WE <-->|"download input / upload output"| MN
+
+    WO -->|"PATCH completed or failed"| HTTP
+    WT -->|"PATCH completed or failed"| HTTP
+    WE -->|"PATCH completed or failed"| HTTP
+
+    WO -->|"heartbeat SET TTL"| HP
+    WT -->|"heartbeat SET TTL"| HP
+    WE -->|"heartbeat SET TTL"| HP
+
+    style GW fill:#eff6ff,stroke:#bfdbfe,color:#1e3a5f
+    style DB fill:#faf5ff,stroke:#e9d5ff,color:#3b1f5e
+    style RD fill:#fff1f2,stroke:#fecdd3,color:#7f1d1d
+    style WK fill:#fffbeb,stroke:#fde68a,color:#713f12
+    style MN fill:#f0fdf4,stroke:#bbf7d0,color:#14532d
 
 ---
 
